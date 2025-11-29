@@ -192,6 +192,9 @@ timeline.push({
  * Includes robust logging and error handling to prevent white screen issues.
  */
 function save_data() {
+    // ⭐ 关键：强制日志 (必须是函数内的第一行可执行语句) ⭐
+    console.log("!!! SAVE DATA FUNCTION CALLED !!!"); 
+
     // 1. Filter and get only the relevant trial data
     const trials_array = jsPsych.data.get()
         .filter({data_type: 'trial_data'})
@@ -213,13 +216,13 @@ function save_data() {
     })
     .then(response => response.text()) 
     .then(result => {
-        // ⭐ Logging: Print the raw result for debugging (Crucial for white screen fix) ⭐
+        // Logging: Print the raw result for debugging (Crucial for white screen fix)
         console.log('Apps Script returned RAW result:', result);
         
         let message = '';
         let color = 'red';
         
-        // ⭐ Fault Tolerance: Check for "Success" but display a message regardless of strict success ⭐
+        // Fault Tolerance: Check for "Success" but display a message regardless of strict success
         if (result.trim() === 'Success') {
              message = 'Data upload successful! Thank you for your participation.';
              color = 'green';
