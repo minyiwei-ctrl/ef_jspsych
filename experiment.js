@@ -19,23 +19,30 @@ let timeline = [];
 // 2. INITIAL FLOW: NETID INPUT AND SETUP
 // =================================================================
 
+// experiment.js
 // A. Input NetID Trial
 const netid_input_trial = {
-    type: jsPsychSurveyHtmlForm,
-    questions: [
-        {
-            prompt: "Please enter your **NetID** (Student ID) to begin. This ID will link your experiment data with other records.",
-            placeholder: "e.g., U1234567",
-            name: 'net_id',
-            required: true
-        }
-    ],
+    // 1. Must use the corrected plugin type
+    type: jsPsychSurveyHtmlForm, 
+    
+    // 2. Use the 'html' parameter to define the input form
+    html: `
+        <h2>Welcome to the Executive Function Study</h2>
+        <p>Please enter your <strong>NetID (Student ID)</strong> to begin. This ID will link your experiment data with other records.</p>
+        <div style="text-align: left; margin: 20px auto; width: 300px;">
+            <label for="net_id">NetID:</label><br>
+            <input type="text" id="net_id" name="net_id" required placeholder="e.g., U1234567" style="width: 100%;">
+        </div>
+    `,
+    
     button_label: 'Continue',
+    
     data: { data_type: 'exclude_data', task: 'netid_input' }, 
+    
     on_finish: function(data) {
-        // Retrieve the entered NetID
-        const response_data = data.response;
-        const netid = response_data.net_id;
+        // 3. Keep the corrected data handling
+        const response_data = data.response; 
+        const netid = response_data.net_id; 
         
         // 1. Store the ID globally
         participantId = netid;
