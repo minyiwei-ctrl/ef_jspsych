@@ -1,4 +1,4 @@
-/// experiment.js
+// experiment.js
 
 // ⭐ V7 Migration: Initialize the jsPsych instance ⭐
 const jsPsych = initJsPsych({}); 
@@ -122,6 +122,7 @@ function create_stroop_trial(word, color, correct_key) {
             correct_response: correct_key
         },
         on_finish: function(data) {
+            // Updated response mapping: 'r' -> 'red', 'b' -> 'blue'
             data.correct = jsPsych.pluginAPI.compareKeys(data.response, data.correct_response);
             data.response_label = data.response === 'r' ? 'red' : (data.response === 'b' ? 'blue' : 'miss');
         }
@@ -131,6 +132,7 @@ function create_stroop_trial(word, color, correct_key) {
 // Generate Stimuli (40 trials: 10 repetitions of the 4 base conditions)
 let base_trials = [];
 inkColors.forEach((color, index) => {
+    // Correct response key is taken from the 'r' or 'b' based on index (0 or 1)
     base_trials.push(create_stroop_trial(wordMeanings[index], inkColors[index], responseKeys[index])); // Congruent
     const wrong_index = (index + 1) % 2; 
     base_trials.push(create_stroop_trial(wordMeanings[wrong_index], inkColors[index], responseKeys[index])); // Incongruent
