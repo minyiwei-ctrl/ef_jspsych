@@ -1,8 +1,7 @@
 // experiment.js
 
-// --- ADD THIS LINE ---
-try { var jsPsych = window.jsPsych; } catch (e) { /* silent fail */ } 
-// ---------------------
+// imput initJsPsych function and necessary plugins
+const jsPsych = initJsPsych({}); // jsPsych core initialization
 
 // =================================================================
 // 1. CONFIGURATION AND GLOBAL VARIABLES
@@ -147,8 +146,8 @@ inkColors.forEach((color, index) => {
 });
 
 // Repeat and shuffle
-stroop_trials = jsPsych.randomization.repeat(stroop_trials, 2); 
-const shuffled_stroop_trials = jsPsych.randomization.shuffle(stroop_trials);
+stroop_trials = stroop_trials.concat(stroop_trials); 
+const shuffled_stroop_trials = stroop_trials.sort(() => Math.random() - 0.5);
 
 // Fixation cross
 const fixation = {
