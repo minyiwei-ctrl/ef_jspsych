@@ -1,4 +1,4 @@
-// experiment.js
+/// experiment.js
 
 // ⭐ V7 Migration: Initialize the jsPsych instance ⭐
 const jsPsych = initJsPsych({}); 
@@ -8,7 +8,7 @@ const jsPsych = initJsPsych({});
 // =================================================================
 
 // !!! IMPORTANT: REPLACE THIS URL with your deployed Google Apps Script EXECUTION URL !!!
-// put URL: 'https://script.google.com/macros/s/AKfycbz_xxxxxxxxxxxxxxxxxxxxxxxxxxx/exec'
+// 示例: 'https://script.google.com/macros/s/AKfycbz_xxxxxxxxxxxxxxxxxxxxxxxxxxx/exec'
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzs-RW6DyQL2ucz2RF_2O6myz8JFAQYk50BUuYrftyrPsrkfyUFs5cXdR5db4g1NYK7/exec'; 
 
 // Initialize participantId as empty; it will be set by the input trial
@@ -168,7 +168,7 @@ timeline.push({
     label: 'stroop_block'
 });
 
-/// =================================================================
+// =================================================================
 // 4. DATA SAVING FUNCTION (POST with Download Fallback)
 // =================================================================
 
@@ -228,7 +228,7 @@ function save_data() {
         console.error('Network Error during data transfer. Initiating data download.', error);
         
         // Convert collected data to CSV format
-        const data_csv = trials_data.csv(); 
+        const data_csv = jsPsych.data.get().csv(); // Use jsPsych.data.get().csv() to ensure all data is captured
         const filename = `${participantId}_stroop_data.csv`;
         
         // Create a downloadable Blob object
@@ -240,7 +240,7 @@ function save_data() {
             <h2>Experiment Finished!</h2>
             <p style="color:red;"><strong>CRITICAL ERROR: Data upload failed due to network security limits (CORS).</strong></p>
             <p>To ensure your data is recorded, please click the button below to **download your data file**.</p>
-            <p>Then, attach the file named **${filename}** to an email and send it to the experimenter at **[minyiwei@tamu.edu]**.</p>
+            <p>Then, attach the file named **${filename}** to an email and send it to the experimenter at **[YOUR EMAIL ADDRESS HERE]**.</p>
             
             <a href="${url}" download="${filename}" class="jspsych-btn" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
                 **Click to Download Data File**
@@ -250,3 +250,27 @@ function save_data() {
         jsPsych.pluginAPI.exitFullscreen();
     });
 }
+
+// =================================================================
+// 5. FINAL SAVE TRIAL (Force execution of save_data)
+// =================================================================
+
+// This is an extra trial to ensure save_data() is called even if the flow is interrupted.
+const final_save_trial = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '<p style="font-size: 24px;">Processing data...</p>',
+    choices: "NO_KEYS",
+    trial_duration: 500, // Display for 0.5 seconds
+    data: { data_type: 'exclude_data', task: 'final_save_prompt' },
+    on_finish: function() {
+        save_data(); // Manual call to the save function
+    }
+};
+
+timeline.push(final_save_trial); // Add to the end of the timeline
+
+// =================================================================
+// 6. START EXPERIMENT
+// =================================================================
+
+jsPsych.run(timeline);
