@@ -101,7 +101,7 @@ timeline.push(stroop_instructions);
 // Stimulus and Response Mapping
 const inkColors = ['red', 'blue'];
 const wordMeanings = ['RED', 'BLUE']; 
-const responseKeys = ['f', 'j']; 
+const responseKeys = ['r', 'b']; // 'r' for red, 'b' for blue
 
 // Function to create a single Stroop trial object
 function create_stroop_trial(word, color, correct_key) {
@@ -123,7 +123,7 @@ function create_stroop_trial(word, color, correct_key) {
         },
         on_finish: function(data) {
             data.correct = jsPsych.pluginAPI.compareKeys(data.response, data.correct_response);
-            data.response_label = data.response === 'f' ? 'red' : (data.response === 'j' ? 'blue' : 'miss');
+            data.response_label = data.response === 'r' ? 'red' : (data.response === 'b' ? 'blue' : 'miss');
         }
     };
 }
