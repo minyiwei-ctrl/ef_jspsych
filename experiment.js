@@ -22,7 +22,7 @@ let timeline = [];
 
 // A. Input NetID Trial
 const netid_input_trial = {
-    type: jsPsychSurveyText,
+    type: jsPsychSurveyHtmlForm,
     questions: [
         {
             prompt: "Please enter your **NetID** (Student ID) to begin. This ID will link your experiment data with other records.",
