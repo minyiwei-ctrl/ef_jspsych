@@ -1,3 +1,8 @@
+// experiment.js
+
+// --- ADD THIS LINE ---
+try { var jsPsych = window.jsPsych; } catch (e) { /* silent fail */ } 
+// ---------------------
 // =================================================================
 // 1. CONFIGURATION AND GLOBAL VARIABLES
 // =================================================================
