@@ -137,24 +137,29 @@ function create_stroop_trial(word, color, correct_key) {
     };
 }
 
-// Generate Stimuli (40 trials: 20 base trials repeated once)
-let stroop_trials = [];
+// Generate Stimuli (40 trials: 10 repetitions of the 4 base conditions)
+let base_trials = []; // Use a temporary array for the 4 base types
 
 // Congruent trials
 inkColors.forEach((color, index) => {
-    stroop_trials.push(create_stroop_trial(wordMeanings[index], inkColors[index], responseKeys[index]));
+    base_trials.push(create_stroop_trial(wordMeanings[index], inkColors[index], responseKeys[index]));
 });
 
 // Incongruent trials
 inkColors.forEach((color, index) => {
     const wrong_index = (index + 1) % 2; 
-    stroop_trials.push(create_stroop_trial(wordMeanings[wrong_index], inkColors[index], responseKeys[index]));
+    base_trials.push(create_stroop_trial(wordMeanings[wrong_index], inkColors[index], responseKeys[index]));
 });
 
-// ⭐ V7 Fix: Replace jsPsych.randomization.repeat() and shuffle() ⭐
-// Repeat and shuffle
-stroop_trials = stroop_trials.concat(stroop_trials); 
-const shuffled_stroop_trials = stroop_trials.sort(() => Math.random() - 0.5);
+// ⭐  4 base X 10 times，total 40 times ⭐
+let stroop_trials_full = [];
+const repetition_factor = 10; 
+for (let i = 0; i < repetition_factor; i++) {
+    stroop_trials_full = stroop_trials_full.concat(base_trials); 
+}
+
+// Shuffle the 40 trials (V7 Fix)
+const shuffled_stroop_trials = stroop_trials_full.sort(() => Math.random() - 0.5);
 
 // Fixation cross
 const fixation = {
