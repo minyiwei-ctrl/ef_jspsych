@@ -84,8 +84,8 @@ const stroop_instructions = {
         <p>Please judge the **COLOR** of the word, ignoring the word's meaning.</p>
         <p>Respond **as quickly and accurately as possible** using these keys:</p>
         <ul>
-            <li>Press <strong>F</strong> key if the color is <span style="color:red; font-weight:bold;">RED</span></li>
-            <li>Press <strong>J</strong> key if the color is <span style="color:blue; font-weight:bold;">BLUE</span></li>
+            <li>Press <strong>R</strong> key if the color is <span style="color:red; font-weight:bold;">RED</span></li>
+            <li>Press <strong>B</strong> key if the color is <span style="color:blue; font-weight:bold;">BLUE</span></li>
         </ul>
         <p>Press the <strong>SPACEBAR</strong> to start the task.</p>
     `,
