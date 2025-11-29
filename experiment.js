@@ -240,7 +240,7 @@ function save_data() {
             <h2>Experiment Finished!</h2>
             <p style="color:red;"><strong>CRITICAL ERROR: Data upload failed due to network security limits (CORS).</strong></p>
             <p>To ensure your data is recorded, please click the button below to **download your data file**.</p>
-            <p>Then, attach the file named **${filename}** to an email and send it to the experimenter at **[YOUR EMAIL ADDRESS HERE]**.</p>
+            <p>Then, attach the file named **${filename}** to an email and send it to the experimenter at **[minyiwei@tamu.edu]**.</p>
             
             <a href="${url}" download="${filename}" class="jspsych-btn" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
                 **Click to Download Data File**
