@@ -7,9 +7,9 @@ const jsPsych = initJsPsych({});
 // 1. CONFIGURATION AND GLOBAL VARIABLES
 // =================================================================
 
-// !!! IMPORTANT: REPLACE THIS URL with your deployed Google Apps Script URL !!!
-// Use the new, fresh Execution URL from your Apps Script deployment
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzs-RW6DyQL2ucz2RF_2O6myz8JFAQYk50BUuYrftyrPsrkfyUFs5cXdR5db4g1NYK7/exec'; // <--- PASTE NEW URL
+// !!! IMPORTANT: REPLACE THIS URL with your deployed Google Apps Script EXECUTION URL !!!
+// 示例: 'https://script.google.com/macros/s/AKfycbz_xxxxxxxxxxxxxxxxxxxxxxxxxxx/exec'
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzs-RW6DyQL2ucz2RF_2O6myz8JFAQYk50BUuYrftyrPsrkfyUFs5cXdR5db4g1NYK7/exec'; 
 
 // Initialize participantId as empty; it will be set by the input trial
 let participantId = ''; 
@@ -22,10 +22,7 @@ let timeline = [];
 
 // A. Input NetID Trial
 const netid_input_trial = {
-    // ⭐ V7/Path Fix: Using SurveyHtmlForm plugin ⭐
     type: jsPsychSurveyHtmlForm, 
-    
-    // ⭐ V7 Fix: Using 'html' parameter to define form structure ⭐
     html: `
         <h2>Welcome to the Executive Function Study</h2>
         <p>Please enter your <strong>NetID (Student ID)</strong> to begin. This ID will link your experiment data with other records.</p>
@@ -34,13 +31,9 @@ const netid_input_trial = {
             <input type="text" id="net_id" name="net_id" required placeholder="e.g., U1234567" style="width: 100%;">
         </div>
     `,
-    
     button_label: 'Continue',
-    
     data: { data_type: 'exclude_data', task: 'netid_input' }, 
-    
     on_finish: function(data) {
-        // V7: SurveyHtmlForm returns an object
         const response_data = data.response; 
         const netid = response_data.net_id;
         
@@ -116,7 +109,6 @@ function create_stroop_trial(word, color, correct_key) {
 
     return {
         type: jsPsychHtmlKeyboardResponse,
-        // Using inline styling to ensure display if external CSS fails
         stimulus: `<div style="font-size: 100px; font-weight: bold; padding: 50px; color:${color};">${word}</div>`, 
         choices: responseKeys,
         trial_duration: 2000, 
@@ -137,21 +129,14 @@ function create_stroop_trial(word, color, correct_key) {
 }
 
 // Generate Stimuli (40 trials: 10 repetitions of the 4 base conditions)
-
 let base_trials = [];
-
-// Congruent trials (2 types)
 inkColors.forEach((color, index) => {
-    base_trials.push(create_stroop_trial(wordMeanings[index], inkColors[index], responseKeys[index]));
-});
-
-// Incongruent trials (2 types)
-inkColors.forEach((color, index) => {
+    base_trials.push(create_stroop_trial(wordMeanings[index], inkColors[index], responseKeys[index])); // Congruent
     const wrong_index = (index + 1) % 2; 
-    base_trials.push(create_stroop_trial(wordMeanings[wrong_index], inkColors[index], responseKeys[index]));
+    base_trials.push(create_stroop_trial(wordMeanings[wrong_index], inkColors[index], responseKeys[index])); // Incongruent
 });
 
-// ⭐ FIX: Repeat the 4 base trials 10 times to get 40 total Stroop trials ⭐
+// Repeat the 4 base trials 10 times to get 40 total Stroop trials
 let stroop_trials_full = [];
 const repetition_factor = 10; 
 for (let i = 0; i < repetition_factor; i++) {
@@ -192,7 +177,7 @@ timeline.push({
  * Includes robust logging and error handling to prevent white screen issues.
  */
 function save_data() {
-    // ⭐ 关键：强制日志 (必须是函数内的第一行可执行语句) ⭐
+    // ⭐ 关键调试日志：确认函数是否被调用 ⭐
     console.log("!!! SAVE DATA FUNCTION CALLED !!!"); 
 
     // 1. Filter and get only the relevant trial data
@@ -227,7 +212,7 @@ function save_data() {
              message = 'Data upload successful! Thank you for your participation.';
              color = 'green';
         } else {
-             // If Apps Script returns anything else (e.g., "Error: ..."), display it instead of blank screen
+             // If Apps Script returns anything else, display it instead of blank screen
              message = `Data upload failed. Apps Script returned: "${result}". Please contact the experimenter.`;
              color = 'orange'; 
         }
@@ -252,20 +237,25 @@ function save_data() {
 }
 
 // =================================================================
-// 5. FINAL SAVE TRIAL (Force execution of save_data)
+// 5. FINAL SAVE TRIAL (强制执行 save_data)
 // =================================================================
 
-// This trial is added to the end of the timeline to ensure save_data() is called
+// 这是一个额外的试验块，用于确保 save_data() 即使在流程中断时也能被调用。
 const final_save_trial = {
     type: jsPsychHtmlKeyboardResponse,
     stimulus: '<p style="font-size: 24px;">Processing data...</p>',
     choices: "NO_KEYS",
-    trial_duration: 500, // Show for 0.5 seconds
+    trial_duration: 500, // 显示 0.5 秒
     data: { data_type: 'exclude_data', task: 'final_save_prompt' },
     on_finish: function() {
-        save_data(); // Manual call to the save function
+        save_data(); // 手动调用保存函数
     }
 };
 
-timeline.push(final_save_trial); // Add to the end of the timeline
+timeline.push(final_save_trial); // 添加到 timeline 末尾
 
+// =================================================================
+// 6. START EXPERIMENT
+// =================================================================
+
+jsPsych.run(timeline); // 不使用 on_finish，因为我们在最后一个试验中手动调用了 save_data()
