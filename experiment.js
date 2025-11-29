@@ -1,7 +1,7 @@
 // experiment.js
 
-// imput initJsPsych function and necessary plugins
-const jsPsych = initJsPsych({}); // jsPsych core initialization
+// ⭐ V7 Migration: Initialize the jsPsych instance ⭐
+const jsPsych = initJsPsych({}); 
 
 // =================================================================
 // 1. CONFIGURATION AND GLOBAL VARIABLES
@@ -19,13 +19,12 @@ let timeline = [];
 // 2. INITIAL FLOW: NETID INPUT AND SETUP
 // =================================================================
 
-// experiment.js
 // A. Input NetID Trial
 const netid_input_trial = {
-    // 1. Must use the corrected plugin type
+    // ⭐ V7/Path Fix: Using SurveyHtmlForm plugin ⭐
     type: jsPsychSurveyHtmlForm, 
     
-    // 2. Use the 'html' parameter to define the input form
+    // ⭐ V7 Fix: Using 'html' parameter to define form structure, resolving the 'null' rendering issue ⭐
     html: `
         <h2>Welcome to the Executive Function Study</h2>
         <p>Please enter your <strong>NetID (Student ID)</strong> to begin. This ID will link your experiment data with other records.</p>
@@ -40,9 +39,9 @@ const netid_input_trial = {
     data: { data_type: 'exclude_data', task: 'netid_input' }, 
     
     on_finish: function(data) {
-        // 3. Keep the corrected data handling
+        // ⭐ V7 Fix: SurveyHtmlForm returns an object, remove JSON.parse() ⭐
         const response_data = data.response; 
-        const netid = response_data.net_id; 
+        const netid = response_data.net_id; // Get the entered ID
         
         // 1. Store the ID globally
         participantId = netid;
@@ -152,6 +151,7 @@ inkColors.forEach((color, index) => {
     stroop_trials.push(create_stroop_trial(wordMeanings[wrong_index], inkColors[index], responseKeys[index]));
 });
 
+// ⭐ V7 Fix: Replace jsPsych.randomization.repeat() and shuffle() ⭐
 // Repeat and shuffle
 stroop_trials = stroop_trials.concat(stroop_trials); 
 const shuffled_stroop_trials = stroop_trials.sort(() => Math.random() - 0.5);
