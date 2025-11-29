@@ -8,7 +8,7 @@ const jsPsych = initJsPsych({});
 // =================================================================
 
 // !!! IMPORTANT: REPLACE THIS URL with your deployed Google Apps Script EXECUTION URL !!!
-// 示例: 'https://script.google.com/macros/s/AKfycbz_xxxxxxxxxxxxxxxxxxxxxxxxxxx/exec'
+// put URL: 'https://script.google.com/macros/s/AKfycbz_xxxxxxxxxxxxxxxxxxxxxxxxxxx/exec'
 const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzs-RW6DyQL2ucz2RF_2O6myz8JFAQYk50BUuYrftyrPsrkfyUFs5cXdR5db4g1NYK7/exec'; 
 
 // Initialize participantId as empty; it will be set by the input trial
@@ -168,30 +168,31 @@ timeline.push({
     label: 'stroop_block'
 });
 
-// =================================================================
-// 4. DATA SAVING FUNCTION (POST to Google Apps Script)
+/// =================================================================
+// 4. DATA SAVING FUNCTION (POST with Download Fallback)
 // =================================================================
 
 /**
  * Sends all trial data to the Google Apps Script endpoint.
- * Includes robust logging and error handling to prevent white screen issues.
+ * If fetch fails (due to CORS/Network), it prompts the user to download the data as a CSV file.
  */
 function save_data() {
-    // ⭐ 关键调试日志：确认函数是否被调用 ⭐
+    // Critical debug log: Confirm the function was executed
     console.log("!!! SAVE DATA FUNCTION CALLED !!!"); 
 
-    // 1. Filter and get only the relevant trial data
-    const trials_array = jsPsych.data.get()
-        .filter({data_type: 'trial_data'})
-        .values(); 
+    // 1. Get all trial data
+    const trials_data = jsPsych.data.get()
+        .filter({data_type: 'trial_data'});
+        
+    const trials_array = trials_data.values(); 
     
-    // 2. Build the POST request body matching the Apps Script structure
+    // 2. Build the POST request body
     const request_body = {
         participant: participantId, 
         data: trials_array 
     };
     
-    // 3. Send the data
+    // 3. Attempt to send data to Google Apps Script
     fetch(APPS_SCRIPT_URL, {
         method: 'POST',
         headers: {
@@ -201,23 +202,20 @@ function save_data() {
     })
     .then(response => response.text()) 
     .then(result => {
-        // Logging: Print the raw result for debugging (Crucial for white screen fix)
+        // Successful path (Only happens if CORS is bypassed, e.g., local run or proper server)
         console.log('Apps Script returned RAW result:', result);
         
         let message = '';
-        let color = 'red';
-        
-        // Fault Tolerance: Check for "Success" but display a message regardless of strict success
+        let color = 'green';
         if (result.trim() === 'Success') {
              message = 'Data upload successful! Thank you for your participation.';
-             color = 'green';
         } else {
-             // If Apps Script returns anything else, display it instead of blank screen
+             // Apps Script returned an unexpected message
              message = `Data upload failed. Apps Script returned: "${result}". Please contact the experimenter.`;
              color = 'orange'; 
         }
 
-        // Render the final finished screen
+        // Render the final finished screen for success/soft error
         document.querySelector('.jspsych-content').innerHTML = `
             <h2>Experiment Finished!</h2>
             <p style="color:${color};"><strong>${message}</strong></p>
@@ -226,36 +224,29 @@ function save_data() {
         jsPsych.pluginAPI.exitFullscreen();
     })
     .catch(error => {
-        // Critical network error: Display immediate instruction to the user
-        console.error('Network Error during data transfer:', error);
+        // ⭐⭐⭐ Critical: Data Upload Failed (Likely CORS/Network Issue) ⭐⭐⭐
+        console.error('Network Error during data transfer. Initiating data download.', error);
+        
+        // Convert collected data to CSV format
+        const data_csv = trials_data.csv(); 
+        const filename = `${participantId}_stroop_data.csv`;
+        
+        // Create a downloadable Blob object
+        const blob = new Blob([data_csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        
+        // Render the fallback screen with download instructions
         document.querySelector('.jspsych-content').innerHTML = `
             <h2>Experiment Finished!</h2>
-            <p style="color:red;"><strong>CRITICAL ERROR: Could not connect to the data server.</strong></p>
-            <p>DO NOT close this page. Please contact the experimenter immediately.</p>
+            <p style="color:red;"><strong>CRITICAL ERROR: Data upload failed due to network security limits (CORS).</strong></p>
+            <p>To ensure your data is recorded, please click the button below to **download your data file**.</p>
+            <p>Then, attach the file named **${filename}** to an email and send it to the experimenter at **[minyiwei@tamu.edu]**.</p>
+            
+            <a href="${url}" download="${filename}" class="jspsych-btn" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
+                **Click to Download Data File**
+            </a>
+            <p style="margin-top: 20px;">You may close this page after downloading the file and sending the email.</p>
         `;
+        jsPsych.pluginAPI.exitFullscreen();
     });
 }
-
-// =================================================================
-// 5. FINAL SAVE TRIAL (强制执行 save_data)
-// =================================================================
-
-// 这是一个额外的试验块，用于确保 save_data() 即使在流程中断时也能被调用。
-const final_save_trial = {
-    type: jsPsychHtmlKeyboardResponse,
-    stimulus: '<p style="font-size: 24px;">Processing data...</p>',
-    choices: "NO_KEYS",
-    trial_duration: 500, // 显示 0.5 秒
-    data: { data_type: 'exclude_data', task: 'final_save_prompt' },
-    on_finish: function() {
-        save_data(); // 手动调用保存函数
-    }
-};
-
-timeline.push(final_save_trial); // 添加到 timeline 末尾
-
-// =================================================================
-// 6. START EXPERIMENT
-// =================================================================
-
-jsPsych.run(timeline); // 不使用 on_finish，因为我们在最后一个试验中手动调用了 save_data()
