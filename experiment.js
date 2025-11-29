@@ -34,7 +34,7 @@ const netid_input_trial = {
     data: { data_type: 'exclude_data', task: 'netid_input' }, 
     on_finish: function(data) {
         // Retrieve the entered NetID
-        const response_data = JSON.parse(data.response);
+        const response_data = data.response;
         const netid = response_data.net_id;
         
         // 1. Store the ID globally
