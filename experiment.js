@@ -269,8 +269,3 @@ const final_save_trial = {
 
 timeline.push(final_save_trial); // Add to the end of the timeline
 
-// =================================================================
-// 6. START EXPERIMENT
-// =================================================================
-
-jsPsych.run(timeline);
