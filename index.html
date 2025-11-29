@@ -1,41 +1,37 @@
-
+<!DOCTYPE html>
 <html>
   <head>
     <title>Executive Function Test using jsPsych</title>
     
     <!-- ****************************************************** -->
-    <!-- 1. 样式文件 (CSS) - 必须在所有脚本之前加载 -->
+    <!-- 1. 样式文件 (CSS) -->
     <!-- ****************************************************** -->
     <link href="jspsych/css/jspsych.css" rel="stylesheet" /> 
     
-    <!-- 2. 加载你的本地 CSS (如果 styles.css 确实在根目录) -->
-    <!-- 如果没有，请删除下一行以避免 404 错误 -->
-    <link rel="stylesheet" href="styles.css" />
+    <!-- !!! 重点修复: 移除 styles.css 的引用以消除 404 错误 !!! -->
+    <!-- 如果你有 styles.css 文件，请取消注释下一行，否则保持注释 -->
+    <!-- <link rel="stylesheet" href="styles.css" /> -->
+    
+    <!-- !!! 重点修复: 移除 favicon.ico 的引用以消除 404 错误 !!! -->
+    <link rel="icon" href="data:," /> 
   </head>
   <body>
     <!-- 实验内容将在这里显示 -->
 
     <!-- ****************************************************** -->
-    <!-- 3. jsPsych 核心库 - 必须首先加载！ -->
+    <!-- 2. jsPsych 核心库 - 必须首先加载！ -->
     <!-- ****************************************************** -->
     <script src="jspsych/jspsych.js"></script>
 
     <!-- ****************************************************** -->
-    <!-- 4. jsPsych 插件 - 核心库之后，实验代码之前加载 -->
-    <!-- !!! 已根据你的反馈，使用 'plugin-' 开头的文件名 !!! -->
+    <!-- 3. jsPsych 插件 - 核心库之后，实验代码之前加载 -->
     <!-- ****************************************************** -->
-    
-    <!-- HTML Keyboard Response 插件 (用于 Stroop 刺激和欢迎/说明页面) -->
     <script src="jspsych/plugins/plugin-html-keyboard-response.js"></script> 
-    
-    <!-- 全屏插件 -->
     <script src="jspsych/plugins/plugin-fullscreen.js"></script>
-    
-    <!-- Survey HTML Form 插件 (用于 NetID 输入) -->
     <script src="jspsych/plugins/plugin-survey-html-form.js"></script>
     
     <!-- ****************************************************** -->
-    <!-- 5. 实验代码 - 必须在所有 jsPsych 依赖之后加载 -->
+    <!-- 4. 实验代码 - 必须在所有 jsPsych 依赖之后加载 -->
     <!-- ****************************************************** -->
     <script src="experiment.js"></script>
 
