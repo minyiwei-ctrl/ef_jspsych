@@ -252,9 +252,25 @@ function save_data() {
 }
 
 // =================================================================
-// 5. START EXPERIMENT
+// 5. FINAL SAVE TRIAL (Force execution of save_data)
 // =================================================================
 
-jsPsych.run(timeline, {
-    on_finish: save_data
-});
+// This trial is added to the end of the timeline to ensure save_data() is called
+const final_save_trial = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '<p style="font-size: 24px;">Processing data...</p>',
+    choices: "NO_KEYS",
+    trial_duration: 500, // Show for 0.5 seconds
+    data: { data_type: 'exclude_data', task: 'final_save_prompt' },
+    on_finish: function() {
+        save_data(); // Manual call to the save function
+    }
+};
+
+timeline.push(final_save_trial); // Add to the end of the timeline
+
+// =================================================================
+// 6. START EXPERIMENT
+// =================================================================
+
+jsPsych.run(timeline);
