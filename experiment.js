@@ -8,7 +8,7 @@ const jsPsych = initJsPsych({});
 // =================================================================
 
 // !!! IMPORTANT: REPLACE THIS URL with your deployed Google Apps Script URL !!!
-const APPS_SCRIPT_URL = 'hhttps://script.google.com/macros/s/AKfycbzVXGb-jLr32N2ypZhdZxnKHDeU2YhL9XN56zBYvhoa1-BOS1IRCWlD1lrbY12bUKjO/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzVXGb-jLr32N2ypZhdZxnKHDeU2YhL9XN56zBYvhoa1-BOS1IRCWlD1lrbY12bUKjO/exec';
 
 // Initialize participantId as empty; it will be set by the input trial
 let participantId = ''; 
