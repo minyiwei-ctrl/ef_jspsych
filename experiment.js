@@ -8,7 +8,7 @@ const jsPsych = initJsPsych({});
 // =================================================================
 
 // !!! IMPORTANT: REPLACE THIS URL with your deployed Google Apps Script URL !!!
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzVXGb-jLr32N2ypZhdZxnKHDeU2YhL9XN56zBYvhoa1-BOS1IRCWlD1lrbY12bUKjO/exec';
+const APPS_SCRIPT_URL = 'hhttps://script.google.com/macros/s/AKfycbzVXGb-jLr32N2ypZhdZxnKHDeU2YhL9XN56zBYvhoa1-BOS1IRCWlD1lrbY12bUKjO/exec';
 
 // Initialize participantId as empty; it will be set by the input trial
 let participantId = ''; 
@@ -212,16 +212,23 @@ function save_data() {
     })
     .then(response => response.text()) 
     .then(result => {
+        // ⭐ print: Apps Script's actual data ⭐
+        console.log('Apps Script returned RAW result:', result);
+        
         let message = '';
         let color = 'red';
         
+        // ⭐ Fault tolerance: even if the return content is not strictly "Success", the message will be displayed ⭐
         if (result.trim() === 'Success') {
              message = 'Data upload successful! Thank you for your participation.';
              color = 'green';
         } else {
-             message = `Data upload failed. Error: ${result}. Please contact the experimenter.`;
+             // If something other than "Success" is returned, display it instead of a white screen
+             message = `Data upload failed. Apps Script returned: "${result}". Please contact the experimenter.`;
+             color = 'orange'; 
         }
 
+        // finish message
         document.querySelector('.jspsych-content').innerHTML = `
             <h2>Experiment Finished!</h2>
             <p style="color:${color};"><strong>${message}</strong></p>
@@ -238,11 +245,3 @@ function save_data() {
         `;
     });
 }
-
-// =================================================================
-// 5. START EXPERIMENT
-// =================================================================
-
-jsPsych.run(timeline, {
-    on_finish: save_data
-});
