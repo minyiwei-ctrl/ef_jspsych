@@ -9,7 +9,7 @@ const jsPsych = initJsPsych({});
 
 // !!! IMPORTANT: REPLACE THIS URL with your deployed Google Apps Script URL !!!
 // Use the new, fresh Execution URL from your Apps Script deployment
-const APPS_SCRIPT_URL = 'YOUR_NEW_APPS_SCRIPT_EXECUTION_URL_HERE'; // <--- PASTE NEW URL
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzs-RW6DyQL2ucz2RF_2O6myz8JFAQYk50BUuYrftyrPsrkfyUFs5cXdR5db4g1NYK7/exec'; // <--- PASTE NEW URL
 
 // Initialize participantId as empty; it will be set by the input trial
 let participantId = ''; 
