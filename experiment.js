@@ -8,7 +8,8 @@ const jsPsych = initJsPsych({});
 // =================================================================
 
 // !!! IMPORTANT: REPLACE THIS URL with your deployed Google Apps Script URL !!!
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwGKNQb83kw-OuqorWjDsLLEKBANTAmkZMt7WdVv2MTOoLQ2GjebgVHQ4-pKZVwonLw/exec';
+// Use the new, fresh Execution URL from your Apps Script deployment
+const APPS_SCRIPT_URL = 'YOUR_NEW_APPS_SCRIPT_EXECUTION_URL_HERE'; // <--- PASTE NEW URL
 
 // Initialize participantId as empty; it will be set by the input trial
 let participantId = ''; 
@@ -24,7 +25,7 @@ const netid_input_trial = {
     // ⭐ V7/Path Fix: Using SurveyHtmlForm plugin ⭐
     type: jsPsychSurveyHtmlForm, 
     
-    // ⭐ V7 Fix: Using 'html' parameter to define form structure, resolving the 'null' rendering issue ⭐
+    // ⭐ V7 Fix: Using 'html' parameter to define form structure ⭐
     html: `
         <h2>Welcome to the Executive Function Study</h2>
         <p>Please enter your <strong>NetID (Student ID)</strong> to begin. This ID will link your experiment data with other records.</p>
@@ -39,21 +40,18 @@ const netid_input_trial = {
     data: { data_type: 'exclude_data', task: 'netid_input' }, 
     
     on_finish: function(data) {
-        // ⭐ V7 Fix: SurveyHtmlForm returns an object, remove JSON.parse() ⭐
+        // V7: SurveyHtmlForm returns an object
         const response_data = data.response; 
-        const netid = response_data.net_id; // Get the entered ID
+        const netid = response_data.net_id;
         
-        // 1. Store the ID globally
         participantId = netid;
         
-        // 2. Add the ID as a property to ALL subsequent trials
         jsPsych.data.addProperties({
             participant: participantId,
             date_time: new Date().toLocaleString()
         });
 
         if (!netid || netid.length < 5) {
-             // Simple validation: If ID is too short, end the experiment
              jsPsych.endExperiment('Experiment terminated due to invalid or missing NetID.');
         }
         
@@ -118,7 +116,8 @@ function create_stroop_trial(word, color, correct_key) {
 
     return {
         type: jsPsychHtmlKeyboardResponse,
-        stimulus: `<div class="stroop-stimulus" style="color:${color};">${word}</div>`, 
+        // Using inline styling to ensure display if external CSS fails
+        stimulus: `<div style="font-size: 100px; font-weight: bold; padding: 50px; color:${color};">${word}</div>`, 
         choices: responseKeys,
         trial_duration: 2000, 
         post_trial_gap: 0, 
@@ -138,27 +137,28 @@ function create_stroop_trial(word, color, correct_key) {
 }
 
 // Generate Stimuli (40 trials: 10 repetitions of the 4 base conditions)
-let base_trials = []; // Use a temporary array for the 4 base types
 
-// Congruent trials
+let base_trials = [];
+
+// Congruent trials (2 types)
 inkColors.forEach((color, index) => {
     base_trials.push(create_stroop_trial(wordMeanings[index], inkColors[index], responseKeys[index]));
 });
 
-// Incongruent trials
+// Incongruent trials (2 types)
 inkColors.forEach((color, index) => {
     const wrong_index = (index + 1) % 2; 
     base_trials.push(create_stroop_trial(wordMeanings[wrong_index], inkColors[index], responseKeys[index]));
 });
 
-// ⭐  4 base X 10 times，total 40 times ⭐
+// ⭐ FIX: Repeat the 4 base trials 10 times to get 40 total Stroop trials ⭐
 let stroop_trials_full = [];
 const repetition_factor = 10; 
 for (let i = 0; i < repetition_factor; i++) {
     stroop_trials_full = stroop_trials_full.concat(base_trials); 
 }
 
-// Shuffle the 40 trials (V7 Fix)
+// Shuffle the 40 trials
 const shuffled_stroop_trials = stroop_trials_full.sort(() => Math.random() - 0.5);
 
 // Fixation cross
@@ -189,6 +189,7 @@ timeline.push({
 
 /**
  * Sends all trial data to the Google Apps Script endpoint.
+ * Includes robust logging and error handling to prevent white screen issues.
  */
 function save_data() {
     // 1. Filter and get only the relevant trial data
@@ -212,23 +213,23 @@ function save_data() {
     })
     .then(response => response.text()) 
     .then(result => {
-        // ⭐ print: Apps Script's actual data ⭐
+        // ⭐ Logging: Print the raw result for debugging (Crucial for white screen fix) ⭐
         console.log('Apps Script returned RAW result:', result);
         
         let message = '';
         let color = 'red';
         
-        // ⭐ Fault tolerance: even if the return content is not strictly "Success", the message will be displayed ⭐
+        // ⭐ Fault Tolerance: Check for "Success" but display a message regardless of strict success ⭐
         if (result.trim() === 'Success') {
              message = 'Data upload successful! Thank you for your participation.';
              color = 'green';
         } else {
-             // If something other than "Success" is returned, display it instead of a white screen
+             // If Apps Script returns anything else (e.g., "Error: ..."), display it instead of blank screen
              message = `Data upload failed. Apps Script returned: "${result}". Please contact the experimenter.`;
              color = 'orange'; 
         }
 
-        // finish message
+        // Render the final finished screen
         document.querySelector('.jspsych-content').innerHTML = `
             <h2>Experiment Finished!</h2>
             <p style="color:${color};"><strong>${message}</strong></p>
@@ -237,6 +238,7 @@ function save_data() {
         jsPsych.pluginAPI.exitFullscreen();
     })
     .catch(error => {
+        // Critical network error: Display immediate instruction to the user
         console.error('Network Error during data transfer:', error);
         document.querySelector('.jspsych-content').innerHTML = `
             <h2>Experiment Finished!</h2>
@@ -245,3 +247,11 @@ function save_data() {
         `;
     });
 }
+
+// =================================================================
+// 5. START EXPERIMENT
+// =================================================================
+
+jsPsych.run(timeline, {
+    on_finish: save_data
+});
