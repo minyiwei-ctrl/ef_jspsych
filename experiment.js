@@ -182,9 +182,27 @@ timeline.push({
 
 /**
  * Sends all trial data to the PythonAnywhere Flask endpoint.
+ * @param {string} currentPid - The PID is passed explicitly to ensure variable scope integrity.
  */
-function save_data_to_pythonanywhere() {
-    console.log("!!! Data Saving to PythonAnywhere Initiated !!!"); 
+function save_data_to_pythonanywhere(currentPid) {
+    // 1. Critical Check: Ensure PID is valid before proceeding
+    if (!currentPid || currentPid === 'NO_PID_SET' || currentPid === 'NO_PID_FOUND') {
+        // Log to console for debugging
+        console.error('CRITICAL ERROR: Aborting data save because PID is invalid:', currentPid);
+        
+        // Render a final error screen
+        document.body.innerHTML = `
+            <div style="text-align: center; margin-top: 100px; color: red;">
+                <h2>Experiment Complete, but Data NOT Saved!</h2>
+                <p>The participant ID (PID) was not correctly recognized. Please contact the experimenter.</p>
+                <p><strong>PID:</strong> ${currentPid}</p>
+            </div>
+        `;
+        jsPsych.pluginAPI.exitFullscreen();
+        return; // Exit the function gracefully
+    }
+
+    console.log("!!! Data Saving to PythonAnywhere Initiated for PID:", currentPid, "!!!"); 
 
     // Use the jsPsych instance to get data
     const data_to_send = jsPsych.data.get().json(); 
@@ -197,7 +215,13 @@ function save_data_to_pythonanywhere() {
         },
         body: data_to_send,
     })
-    .then(response => response.json()) // Expecting a JSON response from PythonAnywhere
+    .then(response => {
+        // Throw an error if the HTTP status code is not 200 (e.g., 400 or 500)
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json(); // Expecting a JSON response from PythonAnywhere
+    })
     .then(data => {
         let message = '';
         let color = 'green';
@@ -205,9 +229,10 @@ function save_data_to_pythonanywhere() {
         // Check the status returned by the server
         if (data.status === 'success') {
              // Success feedback
-             message = `Data submission successful! Your Participant ID (PID) is: ${participantId}. Thank you for your participation.`;
+             message = `Data submission successful! Your Participant ID (PID) is: ${currentPid}. Thank you for your participation.`;
         } else {
-             // Server returned error (e.g., PID missing)
+             // Server returned error (e.g., PID missing, server side validation fail)
+             // Display the server's error message
              message = `Data upload failed. Server error message: ${data.message}. Please contact the experimenter.`;
              color = 'red'; 
         }
@@ -224,15 +249,16 @@ function save_data_to_pythonanywhere() {
     })
     .catch(error => {
         // ⭐⭐⭐ Critical: Network/CORS Error Handling ⭐⭐⭐
-        console.error('Network connection or CORS error.', error);
+        console.error('Network connection, HTTP, or JSON parsing error.', error);
         
         // Render network error screen, prompt user to contact experimenter
         document.body.innerHTML = `
             <div style="text-align: center; margin-top: 100px; color: red;">
-                <h2>Network Connection Error!</h2>
-                <p>Automatic data upload failed. Please DO NOT close this page, and IMMEDIATELY contact the experimenter (<a href="mailto:minyiwei@tamu.edu">minyiwei@tamu.edu</a>) to ensure your data is saved!</p>
+                <h2>Data Upload Error!</h2>
+                <p>Automatic data upload failed. This is usually due to a network issue or server misconfiguration.</p>
+                <p>Please **DO NOT** close this page, and **IMMEDIATELY** contact the experimenter (<a href="mailto:minyiwei@tamu.edu">minyiwei@tamu.edu</a>) to ensure your data is saved!</p>
                 <p><strong>Error Message:</strong> ${error.message}</p>
-                <p>Your PID is: ${participantId}</p>
+                <p>Your PID is: ${currentPid}</p>
             </div>
         `;
         jsPsych.pluginAPI.exitFullscreen();
@@ -246,6 +272,7 @@ function save_data_to_pythonanywhere() {
 // The .run() method takes the timeline and all initialization parameters (like on_finish).
 jsPsych.run(timeline, {
     on_finish: function() {
-        save_data_to_pythonanywhere();
+        // PASS the global participantId into the function to maintain scope integrity
+        save_data_to_pythonanywhere(participantId);
     }
 });
