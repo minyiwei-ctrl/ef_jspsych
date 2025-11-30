@@ -1,23 +1,22 @@
 // experiment.js
+// ⭐ jsPsych v7 FINAL Structure - Fixed Migration Errors and Integration with PythonAnywhere ⭐
 
-// ⭐ V7 Migration: Initialize the jsPsych instance ⭐
+// Initialization: jsPsych is the instance object
 const jsPsych = initJsPsych({}); 
 
 // =================================================================
-// 1. CONFIGURATION AND GLOBAL VARIABLES (UPDATED)
+// 1. CONFIGURATION AND GLOBAL VARIABLES
 // =================================================================
 
-// ❗❗❗ IMPORTANT: UPDATE THIS URL ❗❗❗
-// This is your PythonAnywhere data receiving route
+// ❗❗❗ IMPORTANT: This is your PythonAnywhere data receiving route ❗❗❗
 const SERVER_URL = 'https://yiwei26.pythonanywhere.com/submit_data'; 
 
-// Initialize PID; it will be read from the URL
 let participantId = 'NO_PID_SET'; 
 
 let timeline = [];
 
 // =================================================================
-// ⭐ 2. NEW: PID EXTRACTION FROM URL (Replaces NetID input) ⭐
+// 2. PID EXTRACTION FROM URL
 // =================================================================
 
 /**
@@ -38,9 +37,9 @@ function getQueryVariable(variable) {
 // Read PID before the experiment starts
 participantId = getQueryVariable('pid'); 
 
-// Append PID to all trial data
+// Append PID to all trial data using the instance object
 jsPsych.data.addProperties({
-    pid: participantId, // Use 'pid' as the field name, consistent with the backend app.py check
+    pid: participantId, 
     date_time: new Date().toLocaleString()
 });
 
@@ -59,7 +58,7 @@ if (participantId === 'NO_PID_FOUND') {
 console.log('Participant PID set to:', participantId);
 
 // =================================================================
-// 3. INITIAL FLOW: SETUP (Remove NetID trial, keep only welcome and fullscreen)
+// 3. INITIAL FLOW: SETUP
 // =================================================================
 
 // A. Welcome and Fullscreen Prompt
@@ -178,18 +177,16 @@ timeline.push({
 });
 
 // =================================================================
-// ⭐ 5. NEW: DATA SAVING FUNCTION (POST to PythonAnywhere) ⭐
+// 5. DATA SAVING FUNCTION (POST to PythonAnywhere)
 // =================================================================
 
 /**
  * Sends all trial data to the PythonAnywhere Flask endpoint.
- * This function is called in the jsPsych.init on_finish, which is more robust.
  */
 function save_data_to_pythonanywhere() {
     console.log("!!! Data Saving to PythonAnywhere Initiated !!!"); 
 
-    // 1. Get all data and convert it to a JSON string
-    // We send all data and let the backend filter it
+    // Use the jsPsych instance to get data
     const data_to_send = jsPsych.data.get().json(); 
     
     // 2. Attempt to send data to PythonAnywhere
@@ -243,12 +240,11 @@ function save_data_to_pythonanywhere() {
 }
 
 // =================================================================
-// 6. START EXPERIMENT 
+// 6. START EXPERIMENT (V7 Compatible: .run() replaces .init())
 // =================================================================
 
-// Remove NetID trial and final_save_trial; use jsPsych.init on_finish for robust data saving.
-jsPsych.init({
-    timeline: timeline,
+// The .run() method takes the timeline and all initialization parameters (like on_finish).
+jsPsych.run(timeline, {
     on_finish: function() {
         save_data_to_pythonanywhere();
     }
