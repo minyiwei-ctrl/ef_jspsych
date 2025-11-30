@@ -4,56 +4,65 @@
 const jsPsych = initJsPsych({}); 
 
 // =================================================================
-// 1. CONFIGURATION AND GLOBAL VARIABLES
+// 1. CONFIGURATION AND GLOBAL VARIABLES (UPDATED)
 // =================================================================
 
-// !!! IMPORTANT: REPLACE THIS URL with your deployed Google Apps Script EXECUTION URL !!!
-// 示例: 'https://script.google.com/macros/s/AKfycbz_xxxxxxxxxxxxxxxxxxxxxxxxxxx/exec'
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzs-RW6DyQL2ucz2RF_2O6myz8JFAQYk50BUuYrftyrPsrkfyUFs5cXdR5db4g1NYK7/exec'; 
+// ❗❗❗ IMPORTANT: UPDATE THIS URL ❗❗❗
+// This is your PythonAnywhere data receiving route
+const SERVER_URL = 'https://yiwei26.pythonanywhere.com/submit_data'; 
 
-// Initialize participantId as empty; it will be set by the input trial
-let participantId = ''; 
+// Initialize PID; it will be read from the URL
+let participantId = 'NO_PID_SET'; 
 
 let timeline = [];
 
 // =================================================================
-// 2. INITIAL FLOW: NETID INPUT AND SETUP
+// ⭐ 2. NEW: PID EXTRACTION FROM URL (Replaces NetID input) ⭐
 // =================================================================
 
-// A. Input NetID Trial
-const netid_input_trial = {
-    type: jsPsychSurveyHtmlForm, 
-    html: `
-        <h2>Welcome to the Executive Function Study</h2>
-        <p>Please enter your <strong>NetID (Student ID)</strong> to begin. This ID will link your experiment data with other records.</p>
-        <div style="text-align: left; margin: 20px auto; width: 300px;">
-            <label for="net_id">NetID:</label><br>
-            <input type="text" id="net_id" name="net_id" required placeholder="e.g., U1234567" style="width: 100%;">
-        </div>
-    `,
-    button_label: 'Continue',
-    data: { data_type: 'exclude_data', task: 'netid_input' }, 
-    on_finish: function(data) {
-        const response_data = data.response; 
-        const netid = response_data.net_id;
-        
-        participantId = netid;
-        
-        jsPsych.data.addProperties({
-            participant: participantId,
-            date_time: new Date().toLocaleString()
-        });
-
-        if (!netid || netid.length < 5) {
-             jsPsych.endExperiment('Experiment terminated due to invalid or missing NetID.');
+/**
+ * Function to extract variables from URL query parameters (e.g., 'pid')
+ */
+function getQueryVariable(variable) {
+    const query = window.location.search.substring(1);
+    const vars = query.split("&");
+    for (let i = 0; i < vars.length; i++) {
+        const pair = vars[i].split("=");
+        if (pair[0] === variable) {
+            return decodeURIComponent(pair[1].replace(/\+/g, " "));
         }
-        
-        console.log('Participant NetID set to:', participantId);
     }
-};
-timeline.push(netid_input_trial);
+    return 'NO_PID_FOUND'; // If PID is not passed from Qualtrics
+}
 
-// B. Welcome and Fullscreen Prompt
+// Read PID before the experiment starts
+participantId = getQueryVariable('pid'); 
+
+// Append PID to all trial data
+jsPsych.data.addProperties({
+    pid: participantId, // Use 'pid' as the field name, consistent with the backend app.py check
+    date_time: new Date().toLocaleString()
+});
+
+// Check if PID is missing, display error and abort if so
+if (participantId === 'NO_PID_FOUND') {
+    document.body.innerHTML = `
+        <div style="text-align: center; margin-top: 50px; color: red;">
+            <h1>Error: Missing Participant ID (PID)</h1>
+            <p>Please ensure you accessed this experiment via the survey link. If you are testing, please manually append <code>?pid=TESTER_ID</code> to the URL.</p>
+        </div>
+    `;
+    // Prevent experiment from running
+    throw new Error("Missing participant ID in URL.");
+}
+
+console.log('Participant PID set to:', participantId);
+
+// =================================================================
+// 3. INITIAL FLOW: SETUP (Remove NetID trial, keep only welcome and fullscreen)
+// =================================================================
+
+// A. Welcome and Fullscreen Prompt
 const welcome = {
     type: jsPsychHtmlKeyboardResponse,
     stimulus: `
@@ -66,7 +75,7 @@ const welcome = {
 };
 timeline.push(welcome);
 
-// C. Enter Fullscreen Mode
+// B. Enter Fullscreen Mode
 const fullscreen = {
     type: jsPsychFullscreen,
     fullscreen_mode: true,
@@ -76,7 +85,7 @@ const fullscreen = {
 };
 timeline.push(fullscreen);
 
-// D. Stroop Task Instructions
+// C. Stroop Task Instructions
 const stroop_instructions = {
     type: jsPsychHtmlKeyboardResponse,
     stimulus: `
@@ -95,13 +104,13 @@ const stroop_instructions = {
 timeline.push(stroop_instructions);
 
 // =================================================================
-// 3. STROOP TASK DEFINITION
+// 4. STROOP TASK DEFINITION
 // =================================================================
 
 // Stimulus and Response Mapping
 const inkColors = ['red', 'blue'];
 const wordMeanings = ['RED', 'BLUE']; 
-const responseKeys = ['r', 'b']; // 'r' for red, 'b' for blue
+const responseKeys = ['r', 'b']; 
 
 // Function to create a single Stroop trial object
 function create_stroop_trial(word, color, correct_key) {
@@ -122,7 +131,6 @@ function create_stroop_trial(word, color, correct_key) {
             correct_response: correct_key
         },
         on_finish: function(data) {
-            // Updated response mapping: 'r' -> 'red', 'b' -> 'blue'
             data.correct = jsPsych.pluginAPI.compareKeys(data.response, data.correct_response);
             data.response_label = data.response === 'r' ? 'red' : (data.response === 'b' ? 'blue' : 'miss');
         }
@@ -132,7 +140,6 @@ function create_stroop_trial(word, color, correct_key) {
 // Generate Stimuli (40 trials: 10 repetitions of the 4 base conditions)
 let base_trials = [];
 inkColors.forEach((color, index) => {
-    // Correct response key is taken from the 'r' or 'b' based on index (0 or 1)
     base_trials.push(create_stroop_trial(wordMeanings[index], inkColors[index], responseKeys[index])); // Congruent
     const wrong_index = (index + 1) % 2; 
     base_trials.push(create_stroop_trial(wordMeanings[wrong_index], inkColors[index], responseKeys[index])); // Incongruent
@@ -171,108 +178,78 @@ timeline.push({
 });
 
 // =================================================================
-// 4. DATA SAVING FUNCTION (POST with Download Fallback)
+// ⭐ 5. NEW: DATA SAVING FUNCTION (POST to PythonAnywhere) ⭐
 // =================================================================
 
 /**
- * Sends all trial data to the Google Apps Script endpoint.
- * If fetch fails (due to CORS/Network), it prompts the user to download the data as a CSV file.
+ * Sends all trial data to the PythonAnywhere Flask endpoint.
+ * This function is called in the jsPsych.init on_finish, which is more robust.
  */
-function save_data() {
-    // Critical debug log: Confirm the function was executed
-    console.log("!!! SAVE DATA FUNCTION CALLED !!!"); 
+function save_data_to_pythonanywhere() {
+    console.log("!!! Data Saving to PythonAnywhere Initiated !!!"); 
 
-    // 1. Get all trial data
-    const trials_data = jsPsych.data.get()
-        .filter({data_type: 'trial_data'});
-        
-    const trials_array = trials_data.values(); 
+    // 1. Get all data and convert it to a JSON string
+    // We send all data and let the backend filter it
+    const data_to_send = jsPsych.data.get().json(); 
     
-    // 2. Build the POST request body
-    const request_body = {
-        participant: participantId, 
-        data: trials_array 
-    };
-    
-    // 3. Attempt to send data to Google Apps Script
-    fetch(APPS_SCRIPT_URL, {
+    // 2. Attempt to send data to PythonAnywhere
+    fetch(SERVER_URL, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify(request_body),
+        body: data_to_send,
     })
-    .then(response => response.text()) 
-    .then(result => {
-        // Successful path (Only happens if CORS is bypassed, e.g., local run or proper server)
-        console.log('Apps Script returned RAW result:', result);
-        
+    .then(response => response.json()) // Expecting a JSON response from PythonAnywhere
+    .then(data => {
         let message = '';
         let color = 'green';
-        if (result.trim() === 'Success') {
-             message = 'Data upload successful! Thank you for your participation.';
+        
+        // Check the status returned by the server
+        if (data.status === 'success') {
+             // Success feedback
+             message = `Data submission successful! Your Participant ID (PID) is: ${participantId}. Thank you for your participation.`;
         } else {
-             // Apps Script returned an unexpected message
-             message = `Data upload failed. Apps Script returned: "${result}". Please contact the experimenter.`;
-             color = 'orange'; 
+             // Server returned error (e.g., PID missing)
+             message = `Data upload failed. Server error message: ${data.message}. Please contact the experimenter.`;
+             color = 'red'; 
         }
 
-        // Render the final finished screen for success/soft error
-        document.querySelector('.jspsych-content').innerHTML = `
-            <h2>Experiment Finished!</h2>
-            <p style="color:${color};"><strong>${message}</strong></p>
-            <p>You may now safely close this window.</p>
+        // Render the final success/failure screen
+        document.body.innerHTML = `
+            <div style="text-align: center; margin-top: 100px;">
+                <h2>Experiment Complete!</h2>
+                <p style="color:${color}; font-size: 1.2em;"><strong>${message}</strong></p>
+                <p>You may now safely close this window.</p>
+            </div>
         `;
         jsPsych.pluginAPI.exitFullscreen();
     })
     .catch(error => {
-        // ⭐⭐⭐ Critical: Data Upload Failed (Likely CORS/Network Issue) ⭐⭐⭐
-        console.error('Network Error during data transfer. Initiating data download.', error);
+        // ⭐⭐⭐ Critical: Network/CORS Error Handling ⭐⭐⭐
+        console.error('Network connection or CORS error.', error);
         
-        // Convert collected data to CSV format
-        const data_csv = jsPsych.data.get().csv(); // Use jsPsych.data.get().csv() to ensure all data is captured
-        const filename = `${participantId}_stroop_data.csv`;
-        
-        // Create a downloadable Blob object
-        const blob = new Blob([data_csv], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        
-        // Render the fallback screen with download instructions
-        document.querySelector('.jspsych-content').innerHTML = `
-            <h2>Experiment Finished!</h2>
-            <p style="color:red;"><strong>CRITICAL ERROR: Data upload failed due to network security limits (CORS).</strong></p>
-            <p>To ensure your data is recorded, please click the button below to **download your data file**.</p>
-            <p>Then, attach the file named **${filename}** to an email and send it to the experimenter at **[minyiwei@tamu.edu]**.</p>
-            
-            <a href="${url}" download="${filename}" class="jspsych-btn" style="background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">
-                **Click to Download Data File**
-            </a>
-            <p style="margin-top: 20px;">You may close this page after downloading the file and sending the email.</p>
+        // Render network error screen, prompt user to contact experimenter
+        document.body.innerHTML = `
+            <div style="text-align: center; margin-top: 100px; color: red;">
+                <h2>Network Connection Error!</h2>
+                <p>Automatic data upload failed. Please DO NOT close this page, and IMMEDIATELY contact the experimenter (<a href="mailto:minyiwei@tamu.edu">minyiwei@tamu.edu</a>) to ensure your data is saved!</p>
+                <p><strong>Error Message:</strong> ${error.message}</p>
+                <p>Your PID is: ${participantId}</p>
+            </div>
         `;
         jsPsych.pluginAPI.exitFullscreen();
     });
 }
 
 // =================================================================
-// 5. FINAL SAVE TRIAL (Force execution of save_data)
+// 6. START EXPERIMENT 
 // =================================================================
 
-// This is an extra trial to ensure save_data() is called even if the flow is interrupted.
-const final_save_trial = {
-    type: jsPsychHtmlKeyboardResponse,
-    stimulus: '<p style="font-size: 24px;">Processing data...</p>',
-    choices: "NO_KEYS",
-    trial_duration: 500, // Display for 0.5 seconds
-    data: { data_type: 'exclude_data', task: 'final_save_prompt' },
+// Remove NetID trial and final_save_trial; use jsPsych.init on_finish for robust data saving.
+jsPsych.init({
+    timeline: timeline,
     on_finish: function() {
-        save_data(); // Manual call to the save function
+        save_data_to_pythonanywhere();
     }
-};
-
-timeline.push(final_save_trial); // Add to the end of the timeline
-
-// =================================================================
-// 6. START EXPERIMENT
-// =================================================================
-
-jsPsych.run(timeline);
+});
