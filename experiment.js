@@ -311,7 +311,52 @@ const nback_instructions = {
     type: jsPsychHtmlKeyboardResponse,
     stimulus: `
         <h2>Task 3: Updating (2-Back Task)</h2>
-        <p>You will see a sequence of letters. Your task is to determine if the current letter is the **SAME** as the letter shown **two trials ago**.</p>
+        <p>Your task is to determine if the <strong>CURRENT letter</strong> is the same as the letter that appeared <strong>2 trials ago</strong>.</p>
+        
+        <h4 style="margin-top: 30px; border-bottom: 2px solid #333; padding-bottom: 5px;">The Most Direct Flow (Positional Comparison)</h4>
+        
+        <table style="width: 80%; margin: 20px auto; border-collapse: collapse; text-align: center;">
+            <thead>
+                <tr style="background-color: #eee;">
+                    <th style="border: 1px solid #ccc; padding: 10px;">Current Position (N)</th>
+                    <th style="border: 1px solid #ccc; padding: 10px;">Letter to Compare (N-2)</th>
+                    <th style="border: 1px solid #ccc; padding: 10px;">Simple Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td style="border: 1px solid #ccc; padding: 10px;">1st Letter</td>
+                    <td style="border: 1px solid #ccc; padding: 10px;">**None**</td>
+                    <td style="border: 1px solid #ccc; padding: 10px; font-weight: bold;">Always press **F** (Mismatch)</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ccc; padding: 10px;">2nd Letter</td>
+                    <td style="border: 1px solid #ccc; padding: 10px;">**None**</td>
+                    <td style="border: 1px solid #ccc; padding: 10px; font-weight: bold;">Always press **F** (Mismatch)</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ccc; padding: 10px;">3rd Letter</td>
+                    <td style="border: 1px solid #ccc; padding: 10px;">**1st Letter**</td>
+                    <td style="border: 1px solid #ccc; padding: 10px;">Compare Position 3 vs 1</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ccc; padding: 10px;">4th Letter</td>
+                    <td style="border: 1px solid #ccc; padding: 10px;">**2nd Letter**</td>
+                    <td style="border: 1px solid #ccc; padding: 10px;">Compare Position 4 vs 2</td>
+                </tr>
+                <tr>
+                    <td style="border: 1px solid #ccc; padding: 10px;">5th Letter</td>
+                    <td style="border: 1px solid #ccc; padding: 10px;">**3rd Letter**</td>
+                    <td style="border: 1px solid #ccc; padding: 10px;">Compare Position 5 vs 3</td>
+                </tr>
+                <tr style="background-color: #f9f9f9;">
+                    <td style="border: 1px solid #ccc; padding: 10px;">**...**</td>
+                    <td style="border: 1px solid #ccc; padding: 10px;">**...**</td>
+                    <td style="border: 1px solid #ccc; padding: 10px; font-weight: bold;">Current Position (N) ALWAYS compares to Position (N-2)</td>
+                </tr>
+            </tbody>
+        </table>
+
         <p>Use the following keys:</p>
         <ul>
             <li>Press <strong>SPACEBAR</strong> if the current letter is the **SAME** as the one two trials ago (Target)</li>
