@@ -1,5 +1,5 @@
 // experiment.js
-// ⭐ 最终版本：添加了详细的错误追踪和 DOM 健壮性修复 ⭐
+// ⭐ 绝对最终版本：将数据保存和最终屏幕显示作为实验时间轴上的最后一个试次来执行，以绕过 on_finish 回调失效问题。 ⭐
 
 // Initialization: jsPsych is the instance object
 const jsPsych = initJsPsych({}); 
@@ -15,7 +15,7 @@ let participantId = 'NO_PID_SET';
 let timeline = [];
 
 // =================================================================
-// 2. PID EXTRACTION FROM URL (Simplified for Robustness)
+// 2. PID EXTRACTION FROM URL (Same as before)
 // =================================================================
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -234,25 +234,39 @@ function save_data_to_pythonanywhere(currentPid) {
     })
     .catch(error => {
         // ⭐⭐⭐ CAPTURE ANY NETWORK OR CORS ERROR HERE ⭐⭐⭐
-        // If the request was blocked entirely (the issue you are facing), 
-        // the error will likely be a 'TypeError: Failed to fetch' or a CORS-related error here.
         console.error('STEP FAILED: Network connection, HTTP, or JSON parsing error. Please check Console for the exact error.', error);
         
         const message = `Data Upload Error! Automatic data upload failed. This is likely due to a network security block (CORS/CSP). Error Message: ${error.message}. Please contact the experimenter (<a href="mailto:minyiwei@tamu.edu">minyiwei@tamu.edu</a>).`;
         renderFinalScreen(message, 'red', currentPid);
         
-        // Return a rejected promise to ensure the error is logged even if the DOM injection failed.
         return Promise.reject(error);
     });
 }
 
 // =================================================================
-// 6. START EXPERIMENT (V7 Compatible: .run() replaces .init())
+// 6. ADD FINAL DATA SAVING STEP TO TIMELINE
 // =================================================================
 
-jsPsych.run(timeline, {
-    on_finish: function() {
-        console.log("JsPsych Timeline FINISHED. Executing on_finish callback.");
+// 这是一个虚拟的最后试次，其唯一目的是在实验流程结束时触发数据保存函数。
+const final_data_save_trial = {
+    type: jsPsychHtmlKeyboardResponse,
+    stimulus: '<h2>Experiment complete. Please wait, data is being saved...</h2><p>Do not close this window.</p>',
+    choices: 'NO_KEYS',
+    // 给数据保存留出足够的时间，但数据保存函数会立即覆盖屏幕。
+    trial_duration: 60000, 
+    data: { data_type: 'exclude_data', task: 'data_save_placeholder' },
+    // on_load 在试次显示时立即执行，比 on_finish 更可靠
+    on_load: function() {
+        console.log("FINAL TRIAL LOADED: Executing data save function now.");
         save_data_to_pythonanywhere(participantId);
     }
-});
+};
+
+timeline.push(final_data_save_trial);
+
+// =================================================================
+// 7. START EXPERIMENT (Without unreliable on_finish hook)
+// =================================================================
+
+// 不再使用 on_finish 回调，而是依赖时间轴上的最后一个试次来完成任务。
+jsPsych.run(timeline);
