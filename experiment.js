@@ -1,5 +1,5 @@
 // experiment.js
-// ⭐ jsPsych v7 FINAL Structure - Fixed Migration Errors and Integration with PythonAnywhere ⭐
+// ⭐ 最终版本：添加了详细的错误追踪和 DOM 健壮性修复 ⭐
 
 // Initialization: jsPsych is the instance object
 const jsPsych = initJsPsych({}); 
@@ -12,56 +12,36 @@ const jsPsych = initJsPsych({});
 const SERVER_URL = 'https://yiwei26.pythonanywhere.com/submit_data'; 
 
 let participantId = 'NO_PID_SET'; 
-
 let timeline = [];
 
 // =================================================================
-// 2. PID EXTRACTION FROM URL
+// 2. PID EXTRACTION FROM URL (Simplified for Robustness)
 // =================================================================
 
-/**
- * Function to extract variables from URL query parameters (e.g., 'pid')
- */
-function getQueryVariable(variable) {
-    const query = window.location.search.substring(1);
-    const vars = query.split("&");
-    for (let i = 0; i < vars.length; i++) {
-        const pair = vars[i].split("=");
-        if (pair[0] === variable) {
-            return decodeURIComponent(pair[1].replace(/\+/g, " "));
-        }
-    }
-    return 'NO_PID_FOUND'; // If PID is not passed from Qualtrics
-}
+const urlParams = new URLSearchParams(window.location.search);
+participantId = urlParams.get('pid') || 'NO_PID_FOUND';
 
-// Read PID before the experiment starts
-participantId = getQueryVariable('pid'); 
-
-// Append PID to all trial data using the instance object
 jsPsych.data.addProperties({
     pid: participantId, 
     date_time: new Date().toLocaleString()
 });
 
-// Check if PID is missing, display error and abort if so
 if (participantId === 'NO_PID_FOUND') {
     document.body.innerHTML = `
         <div style="text-align: center; margin-top: 50px; color: red;">
             <h1>Error: Missing Participant ID (PID)</h1>
-            <p>Please ensure you accessed this experiment via the survey link. If you are testing, please manually append <code>?pid=TESTER_ID</code> to the URL.</p>
+            <p>Please manually append <code>?pid=TESTER_ID</code> to the URL.</p>
         </div>
     `;
-    // Prevent experiment from running
     throw new Error("Missing participant ID in URL.");
 }
 
 console.log('Participant PID set to:', participantId);
 
 // =================================================================
-// 3. INITIAL FLOW: SETUP
+// 3. INITIAL FLOW: SETUP (Same as before)
 // =================================================================
 
-// A. Welcome and Fullscreen Prompt
 const welcome = {
     type: jsPsychHtmlKeyboardResponse,
     stimulus: `
@@ -74,7 +54,6 @@ const welcome = {
 };
 timeline.push(welcome);
 
-// B. Enter Fullscreen Mode
 const fullscreen = {
     type: jsPsychFullscreen,
     fullscreen_mode: true,
@@ -84,7 +63,6 @@ const fullscreen = {
 };
 timeline.push(fullscreen);
 
-// C. Stroop Task Instructions
 const stroop_instructions = {
     type: jsPsychHtmlKeyboardResponse,
     stimulus: `
@@ -103,15 +81,13 @@ const stroop_instructions = {
 timeline.push(stroop_instructions);
 
 // =================================================================
-// 4. STROOP TASK DEFINITION
+// 4. STROOP TASK DEFINITION (Same as before)
 // =================================================================
 
-// Stimulus and Response Mapping
 const inkColors = ['red', 'blue'];
 const wordMeanings = ['RED', 'BLUE']; 
 const responseKeys = ['r', 'b']; 
 
-// Function to create a single Stroop trial object
 function create_stroop_trial(word, color, correct_key) {
     const condition = (word === (color === 'red' ? 'RED' : 'BLUE')) ? 'congruent' : 'incongruent';
 
@@ -136,25 +112,21 @@ function create_stroop_trial(word, color, correct_key) {
     };
 }
 
-// Generate Stimuli (40 trials: 10 repetitions of the 4 base conditions)
 let base_trials = [];
 inkColors.forEach((color, index) => {
-    base_trials.push(create_stroop_trial(wordMeanings[index], inkColors[index], responseKeys[index])); // Congruent
+    base_trials.push(create_stroop_trial(wordMeanings[index], inkColors[index], responseKeys[index])); 
     const wrong_index = (index + 1) % 2; 
-    base_trials.push(create_stroop_trial(wordMeanings[wrong_index], inkColors[index], responseKeys[index])); // Incongruent
+    base_trials.push(create_stroop_trial(wordMeanings[wrong_index], inkColors[index], responseKeys[index])); 
 });
 
-// Repeat the 4 base trials 10 times to get 40 total Stroop trials
 let stroop_trials_full = [];
 const repetition_factor = 10; 
 for (let i = 0; i < repetition_factor; i++) {
     stroop_trials_full = stroop_trials_full.concat(base_trials); 
 }
 
-// Shuffle the 40 trials
 const shuffled_stroop_trials = stroop_trials_full.sort(() => Math.random() - 0.5);
 
-// Fixation cross
 const fixation = {
     type: jsPsychHtmlKeyboardResponse,
     stimulus: '<div style="font-size:60px;">+</div>',
@@ -163,51 +135,74 @@ const fixation = {
     data: { data_type: 'exclude_data', task: 'fixation' }
 };
 
-// Create the Stroop block procedure: Fixation -> Trial
 let stroop_procedure = [];
 shuffled_stroop_trials.forEach(trial => {
     stroop_procedure.push(fixation);
     stroop_procedure.push(trial);
 });
 
-// Add the final block to the main timeline
 timeline.push({
     timeline: stroop_procedure,
     label: 'stroop_block'
 });
 
 // =================================================================
-// 5. DATA SAVING FUNCTION (POST to PythonAnywhere)
+// 5. DATA SAVING AND FINAL SCREEN FUNCTION
 // =================================================================
+
+// Helper function to render the final result screen
+function renderFinalScreen(message, color, currentPid) {
+    console.log("Rendering Final Screen:", message, "PID:", currentPid);
+    // Clear the jsPsych display container entirely and replace with new content
+    const displayElement = document.querySelector('#jspsych-display') || document.body;
+    
+    // Clear existing content (essential to remove jsPsych artifacts)
+    displayElement.innerHTML = '';
+    
+    // Create and insert the final content
+    const finalContent = document.createElement('div');
+    finalContent.style.textAlign = 'center';
+    finalContent.style.marginTop = '100px';
+    finalContent.innerHTML = `
+        <h2>Experiment Complete!</h2>
+        <p style="color:${color}; font-size: 1.2em;"><strong>${message}</strong></p>
+        <p>Your PID is: ${currentPid}</p>
+        <p>You may now safely close this window.</p>
+    `;
+    
+    // Check for the main body/display container
+    const jsPsychContainer = document.querySelector('#jspsych-content') || displayElement;
+    jsPsychContainer.appendChild(finalContent);
+    
+    // Attempt to exit fullscreen regardless
+    try {
+        jsPsych.pluginAPI.exitFullscreen();
+    } catch (e) {
+        // Do nothing
+    }
+}
+
 
 /**
  * Sends all trial data to the PythonAnywhere Flask endpoint.
  * @param {string} currentPid - The PID is passed explicitly to ensure variable scope integrity.
  */
 function save_data_to_pythonanywhere(currentPid) {
-    // 1. Critical Check: Ensure PID is valid before proceeding
     if (!currentPid || currentPid === 'NO_PID_SET' || currentPid === 'NO_PID_FOUND') {
-        // Log to console for debugging
         console.error('CRITICAL ERROR: Aborting data save because PID is invalid:', currentPid);
-        
-        // Render a final error screen
-        document.body.innerHTML = `
-            <div style="text-align: center; margin-top: 100px; color: red;">
-                <h2>Experiment Complete, but Data NOT Saved!</h2>
-                <p>The participant ID (PID) was not correctly recognized. Please contact the experimenter.</p>
-                <p><strong>PID:</strong> ${currentPid}</p>
-            </div>
-        `;
-        jsPsych.pluginAPI.exitFullscreen();
-        return; // Exit the function gracefully
+        renderFinalScreen(
+            'Experiment Complete, but Data NOT Saved! The participant ID (PID) was not correctly recognized. Please contact the experimenter.', 
+            'red', 
+            currentPid
+        );
+        return; 
     }
 
-    console.log("!!! Data Saving to PythonAnywhere Initiated for PID:", currentPid, "!!!"); 
+    console.log("STEP 1: Data Saving to PythonAnywhere Initiated for PID:", currentPid); 
 
-    // Use the jsPsych instance to get data
     const data_to_send = jsPsych.data.get().json(); 
     
-    // 2. Attempt to send data to PythonAnywhere
+    // STEP 2: Initiate fetch request
     fetch(SERVER_URL, {
         method: 'POST',
         headers: {
@@ -216,52 +211,38 @@ function save_data_to_pythonanywhere(currentPid) {
         body: data_to_send,
     })
     .then(response => {
-        // Throw an error if the HTTP status code is not 200 (e.g., 400 or 500)
+        console.log("STEP 3: Fetch Response Received. Status:", response.status);
         if (!response.ok) {
-            throw new Error(`HTTP error! Status: ${response.status}`);
+            // Throw an error that includes the response status for better debugging
+            throw new Error(`HTTP error! Status: ${response.status}. Full URL: ${SERVER_URL}`);
         }
-        return response.json(); // Expecting a JSON response from PythonAnywhere
+        return response.json(); 
     })
     .then(data => {
+        console.log("STEP 4: JSON Data Parsed. Server Status:", data.status);
         let message = '';
         let color = 'green';
         
-        // Check the status returned by the server
         if (data.status === 'success') {
-             // Success feedback
-             message = `Data submission successful! Your Participant ID (PID) is: ${currentPid}. Thank you for your participation.`;
+             message = `Data submission successful! Thank you for your participation.`;
         } else {
-             // Server returned error (e.g., PID missing, server side validation fail)
-             // Display the server's error message
              message = `Data upload failed. Server error message: ${data.message}. Please contact the experimenter.`;
              color = 'red'; 
         }
 
-        // Render the final success/failure screen
-        document.body.innerHTML = `
-            <div style="text-align: center; margin-top: 100px;">
-                <h2>Experiment Complete!</h2>
-                <p style="color:${color}; font-size: 1.2em;"><strong>${message}</strong></p>
-                <p>You may now safely close this window.</p>
-            </div>
-        `;
-        jsPsych.pluginAPI.exitFullscreen();
+        renderFinalScreen(message, color, currentPid);
     })
     .catch(error => {
-        // ⭐⭐⭐ Critical: Network/CORS Error Handling ⭐⭐⭐
-        console.error('Network connection, HTTP, or JSON parsing error.', error);
+        // ⭐⭐⭐ CAPTURE ANY NETWORK OR CORS ERROR HERE ⭐⭐⭐
+        // If the request was blocked entirely (the issue you are facing), 
+        // the error will likely be a 'TypeError: Failed to fetch' or a CORS-related error here.
+        console.error('STEP FAILED: Network connection, HTTP, or JSON parsing error. Please check Console for the exact error.', error);
         
-        // Render network error screen, prompt user to contact experimenter
-        document.body.innerHTML = `
-            <div style="text-align: center; margin-top: 100px; color: red;">
-                <h2>Data Upload Error!</h2>
-                <p>Automatic data upload failed. This is usually due to a network issue or server misconfiguration.</p>
-                <p>Please **DO NOT** close this page, and **IMMEDIATELY** contact the experimenter (<a href="mailto:minyiwei@tamu.edu">minyiwei@tamu.edu</a>) to ensure your data is saved!</p>
-                <p><strong>Error Message:</strong> ${error.message}</p>
-                <p>Your PID is: ${currentPid}</p>
-            </div>
-        `;
-        jsPsych.pluginAPI.exitFullscreen();
+        const message = `Data Upload Error! Automatic data upload failed. This is likely due to a network security block (CORS/CSP). Error Message: ${error.message}. Please contact the experimenter (<a href="mailto:minyiwei@tamu.edu">minyiwei@tamu.edu</a>).`;
+        renderFinalScreen(message, 'red', currentPid);
+        
+        // Return a rejected promise to ensure the error is logged even if the DOM injection failed.
+        return Promise.reject(error);
     });
 }
 
@@ -269,10 +250,9 @@ function save_data_to_pythonanywhere(currentPid) {
 // 6. START EXPERIMENT (V7 Compatible: .run() replaces .init())
 // =================================================================
 
-// The .run() method takes the timeline and all initialization parameters (like on_finish).
 jsPsych.run(timeline, {
     on_finish: function() {
-        // PASS the global participantId into the function to maintain scope integrity
+        console.log("JsPsych Timeline FINISHED. Executing on_finish callback.");
         save_data_to_pythonanywhere(participantId);
     }
 });
