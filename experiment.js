@@ -1,5 +1,5 @@
 // experiment.js
-// ⭐ 绝对最终版本：将数据保存和最终屏幕显示作为实验时间轴上的最后一个试次来执行，以绕过 on_finish 回调失效问题。 ⭐
+// ⭐ 终极绕过：使用一个原始 HTML 插件并在 setTimeout 中强制执行数据保存，以绕过所有 jsPsych 回调限制。 ⭐
 
 // Initialization: jsPsych is the instance object
 const jsPsych = initJsPsych({}); 
@@ -15,7 +15,7 @@ let participantId = 'NO_PID_SET';
 let timeline = [];
 
 // =================================================================
-// 2. PID EXTRACTION FROM URL (Same as before)
+// 2. PID EXTRACTION AND DATA PROPERTIES (Same as before)
 // =================================================================
 
 const urlParams = new URLSearchParams(window.location.search);
@@ -39,9 +39,10 @@ if (participantId === 'NO_PID_FOUND') {
 console.log('Participant PID set to:', participantId);
 
 // =================================================================
-// 3. INITIAL FLOW: SETUP (Same as before)
+// 3. INITIAL FLOW & STROOP TASK DEFINITION (Content Remains Unchanged)
 // =================================================================
 
+// [Welcome, Fullscreen, Instructions remain here as timeline.push() calls]
 const welcome = {
     type: jsPsychHtmlKeyboardResponse,
     stimulus: `
@@ -80,17 +81,13 @@ const stroop_instructions = {
 };
 timeline.push(stroop_instructions);
 
-// =================================================================
-// 4. STROOP TASK DEFINITION (Same as before)
-// =================================================================
-
+// --- Stroop Task Logic (Simplified, remaining the same) ---
 const inkColors = ['red', 'blue'];
 const wordMeanings = ['RED', 'BLUE']; 
 const responseKeys = ['r', 'b']; 
 
 function create_stroop_trial(word, color, correct_key) {
     const condition = (word === (color === 'red' ? 'RED' : 'BLUE')) ? 'congruent' : 'incongruent';
-
     return {
         type: jsPsychHtmlKeyboardResponse,
         stimulus: `<div style="font-size: 100px; font-weight: bold; padding: 50px; color:${color};">${word}</div>`, 
@@ -147,19 +144,16 @@ timeline.push({
 });
 
 // =================================================================
-// 5. DATA SAVING AND FINAL SCREEN FUNCTION
+// 4. DATA SAVING AND FINAL SCREEN FUNCTION
 // =================================================================
 
-// Helper function to render the final result screen
 function renderFinalScreen(message, color, currentPid) {
-    console.log("Rendering Final Screen:", message, "PID:", currentPid);
-    // Clear the jsPsych display container entirely and replace with new content
-    const displayElement = document.querySelector('#jspsych-display') || document.body;
+    // This is now outside of jsPsych's control entirely
+    const displayElement = document.body;
     
-    // Clear existing content (essential to remove jsPsych artifacts)
+    // Completely clear the body to guarantee no jsPsych artifacts remain
     displayElement.innerHTML = '';
     
-    // Create and insert the final content
     const finalContent = document.createElement('div');
     finalContent.style.textAlign = 'center';
     finalContent.style.marginTop = '100px';
@@ -170,13 +164,19 @@ function renderFinalScreen(message, color, currentPid) {
         <p>You may now safely close this window.</p>
     `;
     
-    // Check for the main body/display container
-    const jsPsychContainer = document.querySelector('#jspsych-content') || displayElement;
-    jsPsychContainer.appendChild(finalContent);
+    displayElement.appendChild(finalContent);
     
-    // Attempt to exit fullscreen regardless
+    // Attempt to exit fullscreen regardless (using global API if available)
     try {
-        jsPsych.pluginAPI.exitFullscreen();
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.mozCancelFullScreen) { 
+            document.mozCancelFullScreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
     } catch (e) {
         // Do nothing
     }
@@ -184,21 +184,19 @@ function renderFinalScreen(message, color, currentPid) {
 
 
 /**
- * Sends all trial data to the PythonAnywhere Flask endpoint.
- * @param {string} currentPid - The PID is passed explicitly to ensure variable scope integrity.
+ * Sends data and calls renderFinalScreen on success/failure.
  */
-function save_data_to_pythonanywhere(currentPid) {
+function save_and_display_data(currentPid) {
     if (!currentPid || currentPid === 'NO_PID_SET' || currentPid === 'NO_PID_FOUND') {
-        console.error('CRITICAL ERROR: Aborting data save because PID is invalid:', currentPid);
         renderFinalScreen(
-            'Experiment Complete, but Data NOT Saved! The participant ID (PID) was not correctly recognized. Please contact the experimenter.', 
+            'Experiment Complete, but Data NOT Saved! PID was not recognized.', 
             'red', 
             currentPid
         );
         return; 
     }
 
-    console.log("STEP 1: Data Saving to PythonAnywhere Initiated for PID:", currentPid); 
+    console.log("STEP 1: Data Saving Initiated via Primitive Hook for PID:", currentPid); 
 
     const data_to_send = jsPsych.data.get().json(); 
     
@@ -213,60 +211,57 @@ function save_data_to_pythonanywhere(currentPid) {
     .then(response => {
         console.log("STEP 3: Fetch Response Received. Status:", response.status);
         if (!response.ok) {
-            // Throw an error that includes the response status for better debugging
-            throw new Error(`HTTP error! Status: ${response.status}. Full URL: ${SERVER_URL}`);
+            throw new Error(`HTTP error! Status: ${response.status}`);
         }
         return response.json(); 
     })
     .then(data => {
         console.log("STEP 4: JSON Data Parsed. Server Status:", data.status);
-        let message = '';
-        let color = 'green';
-        
-        if (data.status === 'success') {
-             message = `Data submission successful! Thank you for your participation.`;
-        } else {
-             message = `Data upload failed. Server error message: ${data.message}. Please contact the experimenter.`;
-             color = 'red'; 
-        }
-
+        let message = data.status === 'success' ? 
+                      `Data submission successful! Thank you for your participation.` : 
+                      `Data upload failed. Server error: ${data.message}.`;
+        let color = data.status === 'success' ? 'green' : 'red'; 
         renderFinalScreen(message, color, currentPid);
     })
     .catch(error => {
-        // ⭐⭐⭐ CAPTURE ANY NETWORK OR CORS ERROR HERE ⭐⭐⭐
-        console.error('STEP FAILED: Network connection, HTTP, or JSON parsing error. Please check Console for the exact error.', error);
+        console.error('STEP FAILED: Network connection, HTTP, or JSON parsing error.', error);
         
-        const message = `Data Upload Error! Automatic data upload failed. This is likely due to a network security block (CORS/CSP). Error Message: ${error.message}. Please contact the experimenter (<a href="mailto:minyiwei@tamu.edu">minyiwei@tamu.edu</a>).`;
+        const message = `Data Upload Error! Automatic data upload failed. Error Message: ${error.message}. Please contact the experimenter.`;
         renderFinalScreen(message, 'red', currentPid);
-        
-        return Promise.reject(error);
     });
 }
 
 // =================================================================
-// 6. ADD FINAL DATA SAVING STEP TO TIMELINE
+// 5. PRIMITIVE FINAL PLUGIN (CRITICAL BYPASS)
 // =================================================================
 
-// 这是一个虚拟的最后试次，其唯一目的是在实验流程结束时触发数据保存函数。
-const final_data_save_trial = {
+// 创建一个极简的插件来执行数据保存
+const primitive_final_plugin = {
     type: jsPsychHtmlKeyboardResponse,
     stimulus: '<h2>Experiment complete. Please wait, data is being saved...</h2><p>Do not close this window.</p>',
     choices: 'NO_KEYS',
-    // 给数据保存留出足够的时间，但数据保存函数会立即覆盖屏幕。
-    trial_duration: 60000, 
-    data: { data_type: 'exclude_data', task: 'data_save_placeholder' },
-    // on_load 在试次显示时立即执行，比 on_finish 更可靠
-    on_load: function() {
-        console.log("FINAL TRIAL LOADED: Executing data save function now.");
-        save_data_to_pythonanywhere(participantId);
+    trial_duration: 1000, // Very short duration, as we will handle screen display ourselves
+    on_load: function(element) {
+        // ⭐⭐ CRITICAL FIX: Use a small delay to escape jsPsych's trial cleanup phase
+        setTimeout(() => {
+             // Force exit fullscreen BEFORE data save, to ensure execution in a normal window state
+             try {
+                jsPsych.pluginAPI.exitFullscreen();
+             } catch (e) {
+                 // Ignore
+             }
+            save_and_display_data(participantId);
+            // After calling data save, end the jsPsych trial immediately
+            jsPsych.finishTrial();
+        }, 100); 
     }
 };
 
-timeline.push(final_data_save_trial);
+timeline.push(primitive_final_plugin);
+
 
 // =================================================================
-// 7. START EXPERIMENT (Without unreliable on_finish hook)
+// 6. START EXPERIMENT 
 // =================================================================
 
-// 不再使用 on_finish 回调，而是依赖时间轴上的最后一个试次来完成任务。
 jsPsych.run(timeline);
